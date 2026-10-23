@@ -105,6 +105,7 @@ class RootDnsService : Service() {
         QuietPrefs.setBool(this, "network_running", false)
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
+    override fun onBind(intent: Intent?) = null
     override fun onDestroy() { stopRoot(); super.onDestroy() }
 
     private fun makeChannel() {
