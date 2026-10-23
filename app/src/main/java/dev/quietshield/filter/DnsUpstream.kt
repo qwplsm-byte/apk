@@ -8,27 +8,53 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 
 object DnsUpstream {
-    fun query(context: Context, message: ByteArray, protectSocket: ((DatagramSocket) -> Boolean)? = null): ByteArray {
+    private const val TIMEOUT_MS = 1_000
+    private const val MAX_SYSTEM_RESOLVERS = 2
+
+    fun query(
+        context: Context,
+        message: ByteArray,
+        protectSocket: ((DatagramSocket) -> Boolean)? = null
+    ): ByteArray {
         val manager = context.getSystemService(ConnectivityManager::class.java)
-        val servers = manager.allNetworks.asSequence()
-            .filter { network -> manager.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) != true }
+        val systemResolvers = manager.allNetworks.asSequence()
+            .filter { network ->
+                val capabilities = manager.getNetworkCapabilities(network)
+                capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) != true
+            }
             .flatMap { network -> manager.getLinkProperties(network)?.dnsServers.orEmpty().asSequence() }
+            .filterNot(InetAddress::isLoopbackAddress)
             .distinct()
-            .toList() + InetAddress.getByName("1.1.1.1")
-        var failure: Exception? = null
-        for (server in servers.distinct()) {
+            .take(MAX_SYSTEM_RESOLVERS)
+            .toList()
+
+        val resolvers = if (systemResolvers.isNotEmpty()) {
+            systemResolvers
+        } else {
+            listOf(InetAddress.getByName("223.5.5.5"), InetAddress.getByName("1.1.1.1"))
+        }
+
+        var lastFailure: Exception? = null
+        for (resolver in resolvers) {
             try {
                 DatagramSocket().use { socket ->
-                    if (protectSocket != null && !protectSocket(socket)) throw IllegalStateException("Cannot protect DNS socket")
-                    socket.soTimeout = 2_500
-                    socket.send(DatagramPacket(message, message.size, server, 53))
-                    val bytes = ByteArray(4096)
-                    val response = DatagramPacket(bytes, bytes.size)
+                    if (protectSocket != null && !protectSocket(socket)) {
+                        throw IllegalStateException("无法保护上游 DNS 套接字")
+                    }
+                    socket.soTimeout = TIMEOUT_MS
+                    socket.connect(resolver, DNS_PORT)
+                    socket.send(DatagramPacket(message, message.size))
+                    val response = DatagramPacket(ByteArray(MAX_RESPONSE_SIZE), MAX_RESPONSE_SIZE)
                     socket.receive(response)
-                    return bytes.copyOf(response.length)
+                    return response.data.copyOf(response.length)
                 }
-            } catch (e: Exception) { failure = e }
+            } catch (failure: Exception) {
+                lastFailure = failure
+            }
         }
-        throw failure ?: IllegalStateException("No DNS resolver available")
+        throw lastFailure ?: IllegalStateException("没有可用的 DNS 服务器")
     }
+
+    private const val DNS_PORT = 53
+    private const val MAX_RESPONSE_SIZE = 4_096
 }
