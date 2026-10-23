@@ -130,7 +130,7 @@ private fun HomeScreen(start: () -> Unit, stop: () -> Unit, askVpn: () -> Unit, 
     var running by remember { mutableStateOf(QuietPrefs.bool(context, "network_running")) }
     var mode by remember { mutableStateOf(QuietPrefs.networkMode(context)) }
     var dialog by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { while (true) { delay(1000); tick = System.currentTimeMillis(); running = QuietPrefs.bool(context, "network_running"); mode = QuietPrefs.networkMode(context) } }
+    LaunchedEffect(Unit) { while (true) { delay(5_000); tick = System.currentTimeMillis(); running = QuietPrefs.bool(context, "network_running"); mode = QuietPrefs.networkMode(context) } }
     PageColumn(modifier) {
         Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 22.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Panel2), Alignment.Center) { Text("Q", color = Lime, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, fontSize = 21.sp) }
