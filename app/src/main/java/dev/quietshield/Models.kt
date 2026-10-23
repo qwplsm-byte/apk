@@ -28,7 +28,7 @@ object QuietPrefs {
     fun setDomains(c: Context, value: List<DomainRule>) { p(c).edit().putString("domains", gson.toJson(value)).apply() }
     fun uiRules(c: Context): List<UiRule> = readList(c, "ui_rules", uiType, listOf(UiRule("跳过"), UiRule("Skip"), UiRule("关闭"), UiRule("Close")))
     fun setUiRules(c: Context, value: List<UiRule>) { p(c).edit().putString("ui_rules", gson.toJson(value)).apply() }
-    fun packages(c: Context, key: String): Set<String> = readList(c, key, stringsType, emptyList()).toSet()
+    fun packages(c: Context, key: String): Set<String> = readList(c, key, stringsType, emptyList<String>()).toSet()
     fun setPackages(c: Context, key: String, value: Set<String>) { p(c).edit().putString(key, gson.toJson(value.toList())).apply() }
     fun bool(c: Context, key: String, default: Boolean = false) = p(c).getBoolean(key, default)
     fun setBool(c: Context, key: String, value: Boolean) { p(c).edit().putBoolean(key, value).apply() }
